@@ -1,12 +1,33 @@
-# 核心依赖
-ultralytics>=8.3.0          # YOLOv11
-opencv-python>=4.8.0        # 图像处理
-supervision>=0.22.0         # ByteTrack + 可视化
-paddlepaddle>=2.6.0         # PaddlePaddle GPU 版
-paddleocr>=2.8.0            # 车牌 OCR
+# ============================================================
+# 交通监控智能分析系统 v3.0 — 依赖清单
+# Python 3.10 required (PaddlePaddle 兼容性)
+#
+# 安装:
+#   conda create -n traffic python=3.10 -y
+#   conda activate traffic
+#   pip install -r requirements.txt
+# ============================================================
 
-# 辅助
-numpy>=1.24.0
-matplotlib>=3.7.0           # 训练曲线可视化
-pandas>=2.0.0               # 数据处理
-pyyaml>=6.0                 # YAML 配置解析
+# ---- 核心：YOLOv8 检测 + 跟踪 ----
+ultralytics>=8.2.0,<8.4.0
+
+# ---- 核心：车牌 OCR ----
+paddlepaddle==2.6.0         # CPU 版（GPU 版改 paddlepaddle-gpu==2.6.0）
+paddleocr==2.7.3
+
+# ---- 核心：跟踪 + 计数 ----
+supervision>=0.22.0,<0.24.0
+
+# ---- 图像处理 ----
+opencv-python==4.8.1.78
+Pillow>=9.0.0
+
+# ---- 数据处理 ----
+numpy==1.26.4               # ⚠️ 死锁！禁止升级到 2.x（Paddle 不兼容）
+matplotlib>=3.7.0
+pandas>=2.0.0
+pyyaml>=6.0
+
+# ---- 注意 ----
+# 安装后务必检查: python -c "import paddle; print(paddle.__version__)"
+# 若 numpy 被意外升级，执行: pip install "numpy==1.26.4" --force-reinstall --no-deps
