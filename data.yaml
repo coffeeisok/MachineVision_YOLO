@@ -1,0 +1,7 @@
+path: dataset
+train: images/train
+val: images/val
+
+# CCPD2019 车牌检测（单类别）
+names:
+  0: plate
