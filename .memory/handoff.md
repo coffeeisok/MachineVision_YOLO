@@ -1,62 +1,51 @@
-# 会话交接 — 2026-06-07
+# 会话交接 — 2026-06-07 16:00
 
-> 生成时间：2026-06-07 约 12:15 (北京时间)  
-> 当前状态：推理 v6 运行中，**61.5%**，预计 12:25 完成
-
----
-
-## 1. 正在做什么
-
-推理 v6 云端运行中：`screen -S infer_v6` on AutoDL  
-命令：
-```bash
-python src/infer.py --video traffic.mp4 \
-  --vehicle-model yolov8m.pt \
-  --plate-model runs/detect/train-9/weights/best.pt \
-  --device cuda --no-gpu-ocr --half \
-  --output results/output_v6.mp4
-```
-
-## 2. v6 与之前版本的区别
-
-| 修复 | 问题 | 方案 |
-|------|------|------|
-| 中文乱码 | Pillow 找不到字体 | FONT_PATHS 第一位 = PaddleOCR 自带 simfang.ttf |
-| 车型统计错误 | Cars/Buses等统计所有检测过的车 | 改用 `line_zone.trigger()` 返回值精确标记越线 ID |
-
-## 3. 完成后需要做的事（P0）
-
-1. 下载 `output_v6.mp4`：`scp -P 26595 root@connect.nmb2.seetacloud.com:/root/autodl-tmp/traffic_project/results/output_v6.mp4 results/`
-2. 肉眼验证：(a) 中文字体是否正常显示，(b) Cars/Buses/Trucks 是否只统计越线车
-3. 填入实验报告第五章的 v6 车流量数据
-4. Git commit + push（需用户授权）
-
-## 4. 已完成的文档
-
-| 文件 | 状态 |
-|------|------|
-| `docs/实验报告.md` | ✅ 已按评分标准重写（无"参考项目"） |
-| `docs/答辩PPT大纲.md` | ✅ 12 页 |
-| `.memory/*` (10 files) | ✅ 更新至 v3.2 |
-| `README.md` | ✅ v3.1 |
-
-## 5. 关键参数
-
-```
-训练: yolov8m.pt | batch=64 | cache=ram | workers=4 | amp=True | mAP50-95=0.981
-推理: --half --no-gpu-ocr --device cuda --plate-imgsz=480
-字体: PaddleOCR/doc/fonts/simfang.ttf
-计数: supervision LineZone trigger() 返回值（防抖不漏）
-统计面板: Cars/Buses/Trucks/Motorcycles = 仅已越线车（crossed_in_ids | crossed_out_ids）
-```
-
-## 6. 云端信息
-
-- SSH: `ssh -p 26595 root@connect.nmb2.seetacloud.com`
-- 项目路径: `/root/autodl-tmp/traffic_project/`
-- 环境: `conda activate traffic`
-- 模型: `runs/detect/train-9/weights/best.pt`
+> 当前状态：项目全部完成，GitHub 已推送，context 即将上限
 
 ---
 
-**遗留：评分标准 PDF** (`docs/综合项目考核评分参考_整理版.md.md`) 已读取，报告已覆盖全部 8 个打分点。
+## 1. 项目当前状态 (99%)
+
+全部 P0-P1 完成：
+
+- ✅ 训练：train-9, YOLOv8m, mAP50-95=0.981
+- ✅ 推理：output_v6.mp4 (本地 results/)
+- ✅ .docx 实验报告：用户已撰写校对完成
+- ✅ PPT 大纲：docs/答辩PPT大纲.md v3.3 (19 Slides, Prompt + 图片路径)
+- ✅ 素材：images/ 目录 20 个文件
+- ✅ README：含 6 张图片 + 精简项目结构
+- ✅ GitHub：已推送 main 分支
+
+## 2. 关键规则（下个会话务必遵守）
+
+### GitHub vs 本地
+
+```
+GitHub (公开) = 项目源码        本地 only = 个人提交材料
+src/ scripts/ images/           docs/ (报告/PPT/评分参考)
+.memory/ CLAUDE.md             根目录 .docx 提交稿
+data.yaml requirements.txt     CCPD2019/ dataset/
+README.md .gitignore           models/ runs/ results/ traffic.mp4
+```
+
+### 严禁操作
+
+- **绝不删除本地文件** — 只管理 git 暂存区
+- docs/ 和 .docx 提交稿不在 GitHub 上
+- 删除操作必须逐项获得用户授权
+
+## 3. 待办
+
+- 🔜 用户制作答辩 PPT
+- ⬜ 推理结果抽查验证（可选）
+- ⬜ PaddleOCR 微调（可选）
+
+## 4. 环境速查
+
+| 项目 | 值 |
+|------|-----|
+| 本地 | Mac, `/Users/wucoffee/Programs/MachineVision_finalTest/` |
+| GitHub | `git@github.com:coffeeisok/MachineVision_YOLO.git` |
+| 训练产出 | `runs/detect/train-9/weights/best.pt` |
+| 最终视频 | `results/output_v6.mp4` |
+| 素材目录 | `images/` (20 文件) |
