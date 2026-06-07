@@ -83,55 +83,37 @@
 ```
 MachineVision_finalTest/
 │
-├── src/                                    # 核心推理代码（3 个文件）
-│   ├── infer.py                            #   主推理管线 (~310行) ⭐
+├── src/                                    # 核心推理代码
+│   ├── infer.py                            #   主推理管线 (~310行)
 │   ├── plate_ocr.py                        #   PaddleOCR 封装 (~80行)
 │   └── plate_color.py                      #   HSV 颜色分类 (~55行)
 │
-├── scripts/                                # 数据工具
+├── scripts/                                # 数据预处理工具
 │   ├── convert_ccpd.py                     #   CCPD2019 → YOLO 格式
-│   └── split_dataset.py                    #   训练/验证集划分
+│   ├── split_dataset.py                    #   训练/验证集划分
+│   ├── generate_report.py                  #   实验报告 .docx 生成
+│   └── generate_materials.py               #   素材图表生成
 │
-├── .memory/                                # AI 长期记忆（10 个文件）
-│   ├── current_state.md                    #   项目大脑：进度、阻塞
-│   ├── next_tasks.md                       #   优先级待办
-│   ├── known_issues.md                     #   黑名单 + Bug
-│   ├── training_log.md                     #   训练记录
-│   ├── model_status.md                     #   模型清单 + 参数
-│   ├── architecture.md                     #   系统架构 + 目录树
-│   ├── decisions.md                        #   关键决策
-│   ├── project_rules.md                    #   AI 协作规范
-│   ├── session_log.md                      #   会话复盘
-│   └── handoff.md                          #   项目交接文档
+├── images/                                 # 项目素材
 │
 ├── data.yaml                               # YOLO 训练配置
-├── requirements.txt                        # Python 依赖（全锁定版本）
-├── CLAUDE.md                               # AI Agent 全局约束
-├── README.md                               # 本文件
-├── .gitignore
+├── requirements.txt                        # Python 依赖（全版本锁定）
+├── README.md                               # 项目说明书
 │
-├── dataset/                                # 训练数据（🚫 git）
+├── dataset/                                # 训练数据
 │   ├── images/train/                       #   训练集 17,000 张
 │   └── images/val/                         #   验证集 3,000 张
 │
-├── CCPD2019/                               # 原始数据集（🚫 git）
-├── models/                                 # 模型权重（🚫 git）
-├── results/                                # 推理输出（🚫 git）
-├── runs/                                   # 训练记录（🚫 git）
-│   └── detect/train-9/weights/best.pt      #   ★ 最终模型
+├── runs/detect/train-9/                    # 训练产出
+│   ├── weights/best.pt                     #   ★ 最终车牌检测模型 (mAP50-95=0.981)
+│   └── results.png                         #   训练曲线
 │
-└── 2/                                      # 参考项目（不动它）
+├── models/                                 # 模型权重
+│   └── plate_best.pt                       #   部署用模型副本
+│
+└── results/                                # 推理输出
+    └── output_v6.mp4                       #   最终标注视频
 ```
-
-**说明**：
-- `src/` — 核心推理代码，3 文件硬上限
-- `scripts/` — 一次性数据工具脚本
-- `.memory/` — AI 长期记忆系统，详见 [CLAUDE.md](CLAUDE.md) §16
-- `dataset/` — YOLO 训练数据，不入 git
-- `models/` — 模型权重，不入 git
-- `results/` — 推理输出视频，不入 git
-- `runs/` — 训练运行记录，不入 git
-- `2/` — 参考项目，成功跑通，不动它
 
 ---
 
@@ -447,19 +429,8 @@ batch 太大。RTX 3090 24GB 跑 yolov8m 最大 batch=64。
 
 ## 相关文档
 
-| 文件 | 用途 | 面向 |
-|------|------|------|
-| [README.md](README.md) | 项目说明书 | 人类 |
-| [CLAUDE.md](CLAUDE.md) | 开发规则 + 约束 | AI |
-| [current_state.md](.memory/current_state.md) | 当前状态 | AI |
-| [next_tasks.md](.memory/next_tasks.md) | 待办清单 | AI |
-| [known_issues.md](.memory/known_issues.md) | 黑名单 + Bug | AI |
-| [training_log.md](.memory/training_log.md) | 训练记录 | AI |
-| [model_status.md](.memory/model_status.md) | 模型清单 | AI |
-| [architecture.md](.memory/architecture.md) | 系统架构 | AI |
-| [decisions.md](.memory/decisions.md) | 关键决策 | AI |
-| [project_rules.md](.memory/project_rules.md) | AI 协作规范 | AI |
-| [session_log.md](.memory/session_log.md) | 会话复盘 | AI |
-| [handoff.md](.memory/handoff.md) | 项目交接 | AI + 人类 |
-
-> 每个 `.memory/` 文件末尾均有「相关文档」段，形成网状导航。Ctrl/Cmd+Click 文件名即可跳转。
+| 文件 | 用途 |
+|------|------|
+| [README.md](README.md) | 项目说明书 |
+| [requirements.txt](requirements.txt) | Python 依赖清单 |
+| [data.yaml](data.yaml) | YOLO 训练配置 |
