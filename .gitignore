@@ -17,10 +17,11 @@ dataset/
 # AutoDL 云端 PaddleOCR 仓库
 PaddleOCR/
 
-# 训练产出 / 推理产出
+# 训练产出 / 推理产出 / 模型权重
 runs/
 output/
 results/
+models/
 
 # 旧版本代码（参考用，不参与版本管理）
 2/

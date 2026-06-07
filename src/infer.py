@@ -45,35 +45,64 @@ from src.plate_color import PlateColor
 VEHICLE_CLASSES = [2, 3, 5, 7]  # car, motorcycle, bus, truck
 CLASS_NAMES = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
 
-# 中文字体路径（AutoDL 常见位置；找不到则回退默认）
+# 中文字体路径 — 优先 PaddleOCR 自带字体（云端实际可用），其次系统字体
+PADDLEOCR_FONTS = os.path.join(PROJECT_ROOT, "PaddleOCR", "doc", "fonts")
 FONT_PATHS = [
+    os.path.join(PADDLEOCR_FONTS, "simfang.ttf"),            # ★ PaddleOCR 自带仿宋，云端实测有效
+    os.path.join(PADDLEOCR_FONTS, "chinese_cht.ttf"),        # PaddleOCR 自带繁体中文
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",          # AutoDL/Ubuntu
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-    "/System/Library/Fonts/PingFang.ttc",  # macOS
+    "/System/Library/Fonts/PingFang.ttc",                    # macOS
+    "C:\\Windows\\Fonts\\msyh.ttc",                          # Windows
 ]
 
 
 def load_font(size: int = 40) -> ImageFont.FreeTypeFont:
-    """加载中文字体，找不到则用默认字体"""
+    """加载中文字体，找不到则用默认字体（支持 Pillow >=10.1 传 size）"""
     for fp in FONT_PATHS:
         if os.path.exists(fp):
-            return ImageFont.truetype(fp, size)
-    return ImageFont.load_default()
+            try:
+                return ImageFont.truetype(fp, size)
+            except Exception:
+                continue
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
 
 
-def draw_labels_pil(img: np.ndarray, labels: list[tuple]) -> np.ndarray:
+def draw_labels_pil(img: np.ndarray, labels: list[tuple], font_size: int = 32) -> np.ndarray:
     """
-    用 PIL 批量绘制中文标签（避免 OpenCV putText 中文乱码）。
-    labels: [(position, text, color), ...]
+    用 PIL 批量绘制中文标签，支持背景色块提高可读性。
+    labels: [(position, text, text_color, bg_color), ...]
+            bg_color 可选，传入则先在文字下方画矩形底色
     """
     if not labels:
         return img
     img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img_pil)
-    font = load_font(36)
+    font = load_font(font_size)
+
     for item in labels:
-        pos, text, color = item if len(item) == 3 else (item[0], item[1], (0, 255, 0))
-        draw.text(pos, text, font=font, fill=color)
+        pos, text = item[0], item[1]
+        text_color = item[2] if len(item) > 2 else (255, 255, 255)
+        bg_color = item[3] if len(item) > 3 else None
+
+        if bg_color:
+            try:
+                bbox = draw.textbbox((0, 0), text, font=font)
+                tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                draw.rectangle(
+                    [pos[0], pos[1], pos[0] + tw + 8, pos[1] + th + 6],
+                    fill=bg_color,
+                )
+                draw.text((pos[0] + 4, pos[1] + 2), text, font=font, fill=text_color)
+            except AttributeError:
+                draw.text(pos, text, font=font, fill=text_color)
+        else:
+            draw.text(pos, text, font=font, fill=text_color)
+
     return cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
 
 
@@ -93,6 +122,8 @@ def main():
     parser.add_argument("--plate-conf", type=float, default=0.25, help="车牌检测置信度")
     parser.add_argument("--line-y", type=int, default=0, help="横截线 y (0=自动画面60%)")
     parser.add_argument("--retry", type=int, default=10, help="OCR 重试间隔(帧)")
+    parser.add_argument("--half", action="store_true", help="FP16 半精度推理 (速度翻倍)")
+    parser.add_argument("--plate-imgsz", type=int, default=480, help="车牌检测输入尺寸")
     args = parser.parse_args()
 
     # --------------------------------------------------------
@@ -130,13 +161,15 @@ def main():
 
     # 横截线位置
     line_y = args.line_y if args.line_y > 0 else int(height * 0.60)
-    LINE_START = sv.Point(0, line_y)
-    LINE_END = sv.Point(width, line_y)
+    # 方向约定：IN=驶近(车头朝摄像机)  OUT=驶离(车尾朝摄像机)
+    # 画面中向下运动=驶近, 向上运动=驶离
+    LINE_START = sv.Point(width, line_y)
+    LINE_END = sv.Point(0, line_y)
 
     # Supervision 组件
     line_zone = sv.LineZone(start=LINE_START, end=LINE_END)
     line_annotator = sv.LineZoneAnnotator(
-        thickness=4, text_thickness=3, text_scale=2,
+        thickness=3, text_thickness=2, text_scale=1.2,
         color=sv.Color.from_hex("#FF0000"),
     )
     box_annotator = sv.BoxAnnotator(thickness=3)
@@ -154,9 +187,10 @@ def main():
     # 状态机
     # --------------------------------------------------------
     plate_cache: dict[int, dict] = {}       # track_id → {text, color, last_check}
-    reported: set[int] = set()              # 已上报 track_id
+    reported: set[int] = set()              # 已成功识别车牌的 track_id（准确识别数）
     id_to_class: dict[int, str] = {}        # track_id → class_name
-
+    crossed_out_ids: set[tuple] = set()       # 已越线驶离(OUT)的 (track_id, class_name)
+    crossed_in_ids: set[tuple] = set()        # 已越线驶近(IN)的 (track_id, class_name)
     frame_idx = 0
 
     while True:
@@ -173,6 +207,7 @@ def main():
             conf=args.conf,
             tracker="bytetrack.yaml",
             device=args.device,
+            half=args.half,
             verbose=False,
         )[0]
 
@@ -184,7 +219,8 @@ def main():
             detections.tracker_id = np.array([], dtype=int)
 
         # ---- B. 车牌识别 ----------------------------------------
-        labels_to_draw = []
+        box_labels = []       # 车辆方框上的标签（大字）
+        panel_labels = []     # 右上角统计面板（中字）
 
         for i in range(len(detections)):
             track_id = int(detections.tracker_id[i])
@@ -209,7 +245,10 @@ def main():
             else:
                 should_ocr = True
 
-            if should_ocr and plate_model is not None:
+            # 跳过画面顶部远处的车（车牌太小 OCR 读不了）
+            skip_distant = vy2 < height * 0.3  # 车辆底边在画面 30% 以上 = 太远
+
+            if should_ocr and plate_model is not None and not skip_distant:
                 # 裁剪车辆区域
                 pad = 15
                 cx1 = max(0, vx1 - pad)
@@ -220,7 +259,8 @@ def main():
 
                 if vehicle_crop.size > 0:
                     plate_results = plate_model(
-                        vehicle_crop, conf=args.plate_conf, verbose=False
+                        vehicle_crop, conf=args.plate_conf,
+                        imgsz=args.plate_imgsz, half=args.half, verbose=False,
                     )
 
                     for pr in plate_results:
@@ -247,49 +287,75 @@ def main():
                 reported.add(track_id)
                 print(f"  ✨ [ID:{track_id:<3}] {class_name:<5} | {p_text:<8} | {p_color}")
 
-            # 标签
-            display = f"{p_text} | {p_color}" if p_text != "Unknown" else "Scanning..."
-            labels_to_draw.append(((vx1, max(10, vy1 - 50)), display, (0, 255, 0)))
+            # 标签：车牌号 | 颜色 | 车型（紧贴检测框上方，带深色背景提高可读性）
+            display = f" {p_text} | {p_color} | {class_name} " if p_text != "Unknown" else f" Scanning... | {class_name} "
+            text_y = vy1 - 38 if vy1 - 38 > 10 else vy1 + 5  # 正常在框上方，顶天贴框内
+            box_labels.append(((vx1, text_y), display, (255, 255, 255), (0, 140, 0)))
 
-        # ---- C. 越线计数 ----------------------------------------
-        line_zone.trigger(detections=detections)
+        # ---- C. 越线计数 + 越线追踪 ---------------------------------
+        # LineZone.trigger() 返回布尔掩码，精确标记本帧刚越线的检测框
+        crossed_in_mask, crossed_out_mask = line_zone.trigger(detections=detections)
+
+        for i in range(len(detections)):
+            track_id = int(detections.tracker_id[i])
+            cname = id_to_class.get(track_id, CLASS_NAMES.get(int(detections.class_id[i]), "vehicle"))
+            if crossed_out_mask[i]:
+                crossed_out_ids.add((track_id, cname))
+            if crossed_in_mask[i]:
+                crossed_in_ids.add((track_id, cname))
 
         # ---- D. 可视化渲染 --------------------------------------
         frame = box_annotator.annotate(scene=frame, detections=detections)
 
         # 统计面板 (右上角)
-        stats = defaultdict(int)
-        for cls in id_to_class.values():
-            stats[cls] += 1
-        total = len(id_to_class)
+        # 车型分类仅统计已越线的车（supervision 精确标记 + 天然防抖）
+        crossed_all = crossed_in_ids | crossed_out_ids
+        crossed_stats = defaultdict(int)
+        for tid, cname in crossed_all:
+            crossed_stats[cname] += 1
+        total_vehicles = len(id_to_class)
+        total_crossed = line_zone.in_count + line_zone.out_count  # 车流量 = IN + OUT
+        plates_count = len(reported)                                # 准确识别车牌数
 
         overlay = frame.copy()
-        panel_x = width - 640
-        cv2.rectangle(overlay, (panel_x, 30), (width - 30, 420), (15, 15, 15), -1)
-        cv2.rectangle(overlay, (panel_x, 30), (width - 30, 420), (255, 255, 255), 2)
-        frame = cv2.addWeighted(overlay, 0.75, frame, 0.25, 0)
+        panel_w = 650
+        panel_h = 730
+        panel_x = width - panel_w - 30
+        panel_y = 30
+        cv2.rectangle(overlay, (panel_x, panel_y), (width - 30, panel_y + panel_h), (20, 20, 20), -1)
+        cv2.rectangle(overlay, (panel_x, panel_y), (width - 30, panel_y + panel_h), (220, 220, 220), 2)
+        frame = cv2.addWeighted(overlay, 0.85, frame, 0.15, 0)
 
         RED = (255, 0, 0)
-        labels_to_draw.extend([
-            ((panel_x + 40, 50), "TRAFFIC STATS", RED),
-            ((panel_x + 40, 100), f"Total: {total}", RED),
-            ((panel_x + 40, 150), f"Cars: {stats.get('car', 0)}", RED),
-            ((panel_x + 40, 200), f"Buses: {stats.get('bus', 0)}", RED),
-            ((panel_x + 40, 250), f"Trucks: {stats.get('truck', 0)}", RED),
-            ((panel_x + 40, 300), f"Motorcycles: {stats.get('motorcycle', 0)}", RED),
-            ((panel_x + 40, 360), f"IN: {line_zone.in_count}  OUT: {line_zone.out_count}", RED),
+        WHITE = (255, 255, 255)
+        px = panel_x + 35
+        py = panel_y + 35
+        ls = 68
+        panel_labels.extend([
+            ((px, py),          " TRAFFIC STATS ", RED, (60, 60, 60)),
+            ((px, py + ls),     f"Traffic Flow: {total_crossed}", WHITE, None),
+            ((px, py + ls*2),   f"Plates: {plates_count}", WHITE, None),
+            ((px, py + ls*3),   f"IN  (drive-in) : {line_zone.in_count}", WHITE, None),
+            ((px, py + ls*4),   f"OUT (drive-out): {line_zone.out_count}", WHITE, None),
+            ((px, py + ls*5),   f"Online: {total_vehicles}", WHITE, None),
+            ((px, py + ls*6),   f"Cars: {crossed_stats.get('car', 0)}", WHITE, None),
+            ((px, py + ls*7),   f"Buses: {crossed_stats.get('bus', 0)}", WHITE, None),
+            ((px, py + ls*8),   f"Trucks: {crossed_stats.get('truck', 0)}", WHITE, None),
+            ((px, py + ls*9),   f"Motorcycles: {crossed_stats.get('motorcycle', 0)}", WHITE, None),
         ])
 
-        frame = draw_labels_pil(frame, labels_to_draw)
+        frame = draw_labels_pil(frame, box_labels, font_size=32)
+        frame = draw_labels_pil(frame, panel_labels, font_size=42)
         frame = line_annotator.annotate(frame=frame, line_counter=line_zone)
         writer.write(frame)
 
         # 进度
         pct = (frame_idx / total_frames) * 100 if total_frames else 0
+        total_crossed = line_zone.in_count + line_zone.out_count
         print(
             f"\r  [{frame_idx}/{total_frames}] {pct:.1f}%  "
             f"online:{len(detections)}  plates:{len(reported)}  "
-            f"IN:{line_zone.in_count} OUT:{line_zone.out_count}",
+            f"IN:{line_zone.in_count} OUT:{line_zone.out_count}  total:{total_crossed}",
             end="", flush=True,
         )
 
@@ -298,11 +364,14 @@ def main():
     # --------------------------------------------------------
     cap.release()
     writer.release()
+    total_crossed = line_zone.in_count + line_zone.out_count
     print(f"\n\n{'='*60}")
     print(f"  ✅ 完成！")
-    print(f"  正向 (IN) : {line_zone.in_count}")
-    print(f"  反向 (OUT): {line_zone.out_count}")
-    print(f"  输出视频  : {args.output}")
+    print(f"  车流量 (total)    : {total_crossed}")
+    print(f"  驶近 (IN)         : {line_zone.in_count}")
+    print(f"  驶离 (OUT)        : {line_zone.out_count}")
+    print(f"  已识别车牌 (plates): {len(reported)}")
+    print(f"  输出视频           : {args.output}")
     print(f"{'='*60}")
 
 

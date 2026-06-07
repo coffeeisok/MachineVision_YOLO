@@ -12,7 +12,7 @@
 ultralytics>=8.2.0,<8.4.0
 
 # ---- 核心：车牌 OCR ----
-paddlepaddle==2.6.0         # CPU 版（GPU 版改 paddlepaddle-gpu==2.6.0）
+paddlepaddle-gpu==2.6.2     # GPU 版（CPU 版改 paddlepaddle==2.6.0）
 paddleocr==2.7.3
 
 # ---- 核心：跟踪 + 计数 ----

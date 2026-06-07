@@ -271,6 +271,50 @@
 
 8. 每次改动前检查当前版本跟这钱版本是否有变化，若有变化意味着是作者手动改过的，沿用作者改动的思想
 
+
+
+## 16. .memory 长期记忆系统（元规则）
+
+```text
+项目记忆组织法则：
+
+1. 长期记忆统一存放：
+   - 所有长期记忆类型的内容（规则、状态、决策、日志、架构、交接）
+     均放在 .memory/ 目录中
+   - 根目录只保留 CLAUDE.md 和 README.md 两个 .md 文件
+   - 其余 .md 均按类型分类归入 .memory/
+
+2. 修改权限：
+   - 涉及 .memory 文件的删改操作，需先向用户说明理由
+   - 获得用户手动授权后才能执行
+   - 口头确认无效，需逐项授权
+
+3. Context 管理纪律：
+   - 每次准备关闭 Claude Code 或 Context 超过 70% 时，必须执行：
+     a. 更新所有 .memory 文件（反映最新状态）
+     b. 生成/更新 [HANDOFF.md](.memory/handoff.md)（交接快照）
+
+4. 细节完整：
+   - .memory 文件承载完整信息，不允许省略细节只写指针
+   - 每个 .memory 文件首行包含：版本号 + 更新日期 + 快速概览
+
+5. 文件间引用：
+   - .memory 文件间相互引用以提高导航效率
+   - 格式：`[文件名](.memory/xxx.md) §章节名`
+
+.memory/ 当前结构：
+  [current_state.md](.memory/current_state.md)       — 项目大脑：进度、阻塞、最近操作
+  [next_tasks.md](.memory/next_tasks.md)             — 优先级待办（P0/P1/P2）+ 命令模板
+  [known_issues.md](.memory/known_issues.md)         — 技术/流程黑名单 + 已知 bug + 稳定参数
+  [training_log.md](.memory/training_log.md)         — 训练尝试完整记录 + 教训
+  [model_status.md](.memory/model_status.md)         — 5 模型清单 + 超参数 + 推理参数
+  [architecture.md](.memory/architecture.md)         — 推理管线图 + 目录树 + 数据集 + 云端环境
+  [decisions.md](.memory/decisions.md)               — 11 个关键决策及原因
+  [project_rules.md](.memory/project_rules.md)       — AI 协作规范 + 编码规范 + 项目约束 + 第 0 节元规则
+  [session_log.md](.memory/session_log.md)           — 会话复盘 + PaddleOCR 微调踩坑全记录
+  [handoff.md](.memory/handoff.md)                   — 完整项目交接文档（19 节）
+```
+
    
 
    
