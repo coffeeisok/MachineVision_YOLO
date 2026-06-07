@@ -1,6 +1,6 @@
 # 智能交通车牌识别系统
 
-> 版本：v3.3 | 更新：2026-06-07 15:30 (北京时间) | 基于 YOLOv8m + PaddleOCR + supervision | 字体渲染修复版 + 实验报告&amp;答辩PPT完成
+> 版本：v3.5 | 更新：2026-06-07 17:00 (北京时间) | 基于 YOLOv8m + PaddleOCR + supervision | 项目结项
 
 ---
 
@@ -402,7 +402,7 @@ batch 太大。RTX 3090 24GB 跑 yolov8m 最大 batch=64。
 
 ## 开发路线图
 
-### 当前版本：v3.3
+### 当前版本：v3.5（项目结项）
 
 **已完成**：
 - ✅ YOLOv8m 车辆检测 + ByteTrack 跟踪
@@ -411,19 +411,18 @@ batch 太大。RTX 3090 24GB 跑 yolov8m 最大 batch=64。
 - ✅ HSV 车牌颜色分类（蓝/绿/黄/其他）
 - ✅ supervision LineZone 车流量统计（IN/OUT）
 - ✅ FP16 半精度推理优化
-- ✅ PIL 中文标签渲染 + 统计面板（v5/v6 字体修复版）
+- ✅ PIL 中文标签渲染 + 统计面板（v6 字体修复版）
 - ✅ .memory 长期记忆系统搭建
 - ✅ 实验报告 .docx（用户已完成撰写和校对）
-- ✅ 答辩 PPT 大纲（v3.2, 19 Slider + Prompt + Q&A）
-- ✅ 全部素材（images/ 目录 20 个文件，11 类素材）
+- ✅ 答辩 PPT 大纲（v3.3, 19 Slider + Prompt + 素材路径）
+- ✅ 答辩 PPT（.pptx）
+- ✅ 全部素材（images/ 目录 20+ 文件）
+- ✅ .gitignore 加固（docs/ + *.docx + *.pptx 屏蔽）
+- ✅ GitHub 推送（v3.5）
 
-**进行中**：
-- 🔜 答辩 PPT 制作
-
-**计划中**：
-- ⬜ 推理结果抽查验证
-- ⬜ [可选] PaddleOCR 车牌微调
-- ⬜ [可选] 多视频批量推理支持
+**可选后续**：
+- ⬜ PaddleOCR 车牌微调（当前通用模型已可用）
+- ⬜ 多视频批量推理支持
 
 ---
 

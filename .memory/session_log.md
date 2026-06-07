@@ -347,6 +347,30 @@ python tools/export_model.py -c configs/rec/plate_rec.yml \
 
 ---
 
+# 会话 D：v3.5 项目收尾
+
+> 日期：2026-06-07 16:00 ~ 17:00
+
+## 关键事件
+
+| 时间 | 事件 |
+|------|------|
+| 16:10 | 回顾 handoff.md / GitHub vs 本地区别 / 答辩PPT大纲 v3.3 |
+| 16:15 | 发现 docs/ 和 .docx 被误暂存到 git index |
+| 16:20 | Git 暂存区清理：unstage 4 个 docs/ 文件 + 根目录 .docx |
+| 16:20 | .gitignore 加固：新增 `docs/` `*.docx` `*.pptx` 屏蔽规则 |
+| 16:20 | commit v3.5 + push to GitHub |
+| 16:30 | AutoDL → 本地恢复被删文件（train~train-6, 旧视频, yolo26n.pt） |
+| 17:00 | .memory 全量更新 + README 更新 + 最终 commit+push |
+
+## 核心教训
+
+1. **.gitignore 必须覆盖所有本地-only 目录** — docs/ 之前没被屏蔽，导致易误暂存
+2. **git reset HEAD 是安全的回滚方式** — 只取消暂存，不删文件
+3. **AutoDL 云端的文件是本地删文件的最后防线** — 云端数据盘不主动清理
+
+---
+
 # 会话 C：v3.1 字体修复 + 推理重跑
 
 > 日期：2026-06-07 01:48 ~ 进行中
