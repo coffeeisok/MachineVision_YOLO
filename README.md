@@ -1,6 +1,6 @@
 # 智能交通车牌识别系统
 
-> 版本：v3.2 | 更新：2026-06-07 14:30 (北京时间) | 基于 YOLOv8m + PaddleOCR + supervision | 字体渲染修复版 + 实验报告&amp;答辩PPT完成
+> 版本：v3.3 | 更新：2026-06-07 15:30 (北京时间) | 基于 YOLOv8m + PaddleOCR + supervision | 字体渲染修复版 + 实验报告&amp;答辩PPT完成
 
 ---
 
@@ -63,6 +63,18 @@
 ```
 
 **技术栈**：Python 3.10 + YOLOv8m + PaddleOCR + OpenCV + supervision + PIL
+
+![系统架构全景图](images/Traffic%20Monitoring%20Intelligent%20Analysis%20System%20Architecture.png)
+
+---
+
+## 效果预览
+
+| 推理输出帧 1 | 推理输出帧 2 |
+|:--:|:--:|
+| ![output_v6_1](images/output_v6_1.png) | ![output_v6_2](images/output_v6_2.png) |
+
+*4K 交通监控视频推理结果：检测框 + 车牌号 + 颜色 + 车型 + 统计面板 + 横截线*
 
 ---
 
@@ -198,6 +210,8 @@ python scripts/split_dataset.py \
 | 标注格式 | YOLO .txt (class_id xc yc w h) |
 | 类别 | 单类：plate (class_id=0) |
 
+![CCPD2019 样本](images/04_CCPD样本网格.png)
+
 ---
 
 ## 模型训练
@@ -237,6 +251,10 @@ yolo detect train \
 | 基础模型 | yolo11n (2.6M) | yolov8m (25.9M) |
 | mAP50-95 | 0.10 | **0.981** |
 | 提升 | - | **~10x** |
+
+![训练曲线](images/06_results.png)
+
+![性能对比](images/12_性能对比柱状图.png)
 
 ### 关键教训
 - **不要用 nano 模型**：2.6M 参数无法学习车牌小目标
